@@ -1,7 +1,7 @@
 import pika
 
 # Conexão com o RabbitMQ
-connection = pika.BlockingConnection(pika.ConnectionParameters('localhost'))
+connection = pika.BlockingConnection(pika.ConnectionParameters('10.1.24.62'))
 channel = connection.channel()
 
 # Declara a mesma fila usada pelo produtor
