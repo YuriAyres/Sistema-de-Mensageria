@@ -33,10 +33,10 @@ URL_API = "http://10.1.24.62:5000"
 def enviar_mensagem_rabbitmq(placa, data_hora_entrada):
     connection = pika.BlockingConnection(pika.ConnectionParameters('localhost'))
     channel = connection.channel()
-    channel.queue_declare(queue='entrada_veiculos')
+    channel.queue_declare(queue='estacionamento')
 
     mensagem = f"Entrada: {placa};{data_hora_entrada}"
-    channel.basic_publish(exchange='', routing_key='entrada_veiculos', body=mensagem)
+    channel.basic_publish(exchange='', routing_key='estacionamento', body=mensagem)
     print(f"Mensagem enviada para RabbitMQ: {mensagem}")
     connection.close()
 
