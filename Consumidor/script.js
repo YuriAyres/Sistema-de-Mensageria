@@ -1,7 +1,7 @@
 document.addEventListener("DOMContentLoaded", function() {
     // Função para buscar as mensagens do servidor
     function fetchMessages() {
-        fetch('/mensagens') 
+        fetch('http://127.0.0.1:5000/mensagens') 
             .then(response => response.json()) 
             .then(data => {
                 const mensagensContainer = document.querySelector('#mensagens-lista');

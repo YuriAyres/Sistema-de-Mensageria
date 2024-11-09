@@ -1,13 +1,17 @@
 import pika
 from flask import Flask, render_template, jsonify
 import threading
+from flask_cors import CORS
 
 app = Flask(__name__)
+CORS(app)  # Habilita CORS para todas as rotas
+
 
 mensagens = []
-
+URL_RABBIT = "amqps://uxtpvazt:ug2EvD1w4EuMnAlH2yuDT9E35gwnPU8M@prawn.rmq.cloudamqp.com/uxtpvazt"
 # Conexão com o RabbitMQ
-connection = pika.BlockingConnection(pika.ConnectionParameters('10.1.24.62'))
+URL=pika.URLParameters(URL_RABBIT)
+connection=pika.BlockingConnection(URL)
 channel = connection.channel()
 channel.queue_declare(queue='estacionamento')
 
