@@ -11,7 +11,7 @@ import datetime
 GPIO.setmode(GPIO.BOARD)
 BUZZER_ENTRADA = 13
 CS_ENTRADA = 24  
-SERVO_ENTRADA_PIN = 32 
+SERVO_ENTRADA_PIN = 12 
 LED_VERMELHO_ENTRADA = 16  
 LED_VERDE_ENTRADA = 18
 
@@ -23,15 +23,29 @@ GPIO.setup(LED_VERDE_ENTRADA, GPIO.OUT)
 
 # Configuração do PWM para os servos
 servoEntrada = GPIO.PWM(SERVO_ENTRADA_PIN, 50)  # Frequência de 50Hz
-servoEntrada.start(0)  # Inicializa em 0 graus
 
+def angle_to_percent (angle) :
+    if angle > 180 or angle < 0 :
+        return False
+
+    start = 4
+    end = 12.5
+    ratio = (end - start)/180 #Calcul ratio from angle to percent
+
+    angle_as_percent = angle * ratio
+
+    return start + angle_as_percent
+
+servoEntrada.start(angle_to_percent(0))  # Inicializa em 0 graus
 leitorRFID_entrada = SimpleMFRC522()
 
 # URL da API
 URL_API = "http://10.1.24.62:5000"
+URL_RABBIT = "amqps://uxtpvazt:ug2EvD1w4EuMnAlH2yuDT9E35gwnPU8M@prawn.rmq.cloudamqp.com/uxtpvazt"
 
 def enviar_mensagem_rabbitmq(placa, data_hora_entrada):
-    connection = pika.BlockingConnection(pika.ConnectionParameters('localhost'))
+    URL=pika.URLParameters(URL_RABBIT)
+    connection = pika.BlockingConnection(URL)
     channel = connection.channel()
     channel.queue_declare(queue='estacionamento')
 
@@ -47,21 +61,23 @@ def tocar_buzzer(frequencia, duracao, buzzer):
     sleep(duracao)
     p.stop()
 
-def buzzer_erro(buzzer, ledvermelho, ledverde):
+def buzzer_erro(buzzer, ledvermelho):
     tocar_buzzer(200, 0.5, buzzer)
     GPIO.output(ledvermelho, GPIO.HIGH)  # Liga LED vermelho
-    GPIO.output(ledverde, GPIO.LOW)      # Desliga LED verde
+    sleep(2)  # Aguarda 2 segundos
+    GPIO.output(ledvermelho, GPIO.LOW)  # Desliga LED vermelho após 2 segundos
 
-def buzzer_sucesso(buzzer, ledvermelho, ledverde):
+def buzzer_sucesso(buzzer, ledverde):
     tocar_buzzer(1000, 0.5, buzzer)
-    GPIO.output(ledvermelho, GPIO.LOW)   # Desliga LED vermelho
     GPIO.output(ledverde, GPIO.HIGH)     # Liga LED verde
+    sleep(2)  # Aguarda 2 segundos
+    GPIO.output(ledverde, GPIO.LOW)  # Desliga LED verde após 2 segundos
 
 # Função para abrir e fechar a cancela
 def abrir_cancela(servo):
-    servo.ChangeDutyCycle(7)  # Ajuste para abrir (aproximadamente 90 graus)
+    servo.ChangeDutyCycle(angle_to_percent(90))  # Ajuste para abrir (aproximadamente 90 graus)
     sleep(5)  # Aguarda 5 segundos para fechar
-    servo.ChangeDutyCycle(0)  # Para o PWM (cancela fecha)
+    servo.ChangeDutyCycle(angle_to_percent(0))  # Para o PWM (cancela fecha)
     sleep(1)  # Aguarda um segundo antes de permitir o próximo movimento
 
 # Função para finalizar o programa
@@ -98,7 +114,7 @@ def processar_entrada(tag):
         reserva = carro.get('reserva')
         if placa:
             if reserva == 'reservado':
-                buzzer_sucesso(BUZZER_ENTRADA, LED_VERMELHO_ENTRADA, LED_VERDE_ENTRADA)  # Sucesso na entrada
+                buzzer_sucesso(BUZZER_ENTRADA, LED_VERDE_ENTRADA)  # Sucesso na entrada
                 abrir_cancela(servoEntrada)  # Abre a cancela de entrada
 
                  # Enviar dados para RabbitMQ
@@ -110,16 +126,16 @@ def processar_entrada(tag):
                     print("Veículo registrado com sucesso na entrada.")
                 else:
                     print("Erro ao registrar entrada.")
-                    buzzer_erro(BUZZER_ENTRADA, LED_VERMELHO_ENTRADA, LED_VERDE_ENTRADA)
+                    buzzer_erro(BUZZER_ENTRADA, LED_VERMELHO_ENTRADA)
             else:
                 print("Erro ao registrar entrada, veículo não tem reserva.")
-                buzzer_erro(BUZZER_ENTRADA, LED_VERMELHO_ENTRADA, LED_VERDE_ENTRADA)
+                buzzer_erro(BUZZER_ENTRADA, LED_VERMELHO_ENTRADA)
         else:
             print("ID não reconhecido.")
-            buzzer_erro(BUZZER_ENTRADA, LED_VERMELHO_ENTRADA, LED_VERDE_ENTRADA)
+            buzzer_erro(BUZZER_ENTRADA, LED_VERMELHO_ENTRADA)
     else:
         print("Erro ao buscar dados do carro.")
-        buzzer_erro(BUZZER_ENTRADA, LED_VERMELHO_ENTRADA, LED_VERDE_ENTRADA)
+        buzzer_erro(BUZZER_ENTRADA, LED_VERMELHO_ENTRADA)
 
 # Loop principal
 try:
